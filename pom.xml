@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+	<groupId>com.sidgs-trainee.cicd</groupId>
+	<artifactId>parent-pom</artifactId>
+	<packaging>pom</packaging>
+	<version>1.0.0-SNAPSHOT</version>
+	<name>parent-pom</name>
+
+
+	<!-- Consider each API proxy as a module -->
+	<!--modules>
+            <module>../helloApigee-app</module>
+			<module>../getIP-app</module>
+	</modules-->
+
+
+	<!-- To change this to SIDGS Nexus mirror, we use the maven global settings file -->
+	<pluginRepositories>
+		<pluginRepository>
+			<id>central</id>
+			<name>Maven Plugin Repository</name>
+			<url>http://repo1.maven.org/maven3</url>
+			<layout>default</layout>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+			<releases>
+				<updatePolicy>never</updatePolicy>
+			</releases>
+		</pluginRepository>
+	</pluginRepositories>
+
+
+	<build>
+        <pluginManagement>
+            <plugins>
+				<plugin>
+                    <groupId>io.apigee.build-tools.enterprise4g</groupId>
+                    <artifactId>apigee-edge-maven-plugin</artifactId>
+                    <version>1.1.5</version>
+                </plugin>
+
+				<plugin>
+                    <groupId>com.apigee.edge.config</groupId>
+                    <artifactId>apigee-config-maven-plugin</artifactId>
+                    <version>1.1.4</version>
+                </plugin>
+			</plugins>
+        </pluginManagement>
+    </build>
+
+
+	<!-- Properties for SIDGS Edge instance -->
+	<properties>
+
+		<!-- Apigee Edge UI Configuration -->
+        <org>sidgs</org>
+        <apigee.env>dev</apigee.env>
+        <apigee.profile>dev</apigee.profile>
+        <options>clean</options>
+
+        <apigee.api.protocol>http</apigee.api.protocol>
+        <apigee.api.host>edge.sidgs.net</apigee.api.host>
+        <apigee.api.port>8080</apigee.api.port>
+        <apigee.apiversion>v1</apigee.apiversion>
+        <vhostProtocol>http</vhostProtocol>
+        <vhostDomainName>dev-api.apigee.net</vhostDomainName>
+        <vhostDomainPort>9002</vhostDomainPort>
+        <vhostEdgeName>gateway-api</vhostEdgeName>
+
+
+        <!-- Apigee Edge User Credentials -->
+        <apigee.org>${org}</apigee.org>
+        <apigee.username>${username}</apigee.username>
+        <apigee.password>${password}</apigee.password>
+        <apigee.options>${options}</apigee.options>
+
+	</properties>
+
+
+	<!-- This is where you add the environment specific properties under various profile names -->
+	<profiles>
+
+        <!-- Profile to deploy a simple proxy without environment configurations -->
+        <profile>
+			<id>proxy-simple</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+
+            <build>
+				<plugins>
+
+					<!-- Plugin used to copy the apiproxy to the target repo -->
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>2.3</version>
+						<executions>
+							<execution>
+								<id>copy-resources-step</id>
+								<phase>package</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<!-- this is important -->
+									<overwrite>true</overwrite>
+									<!-- target -->
+									<outputDirectory>${basedir}/target/apiproxy</outputDirectory>
+									<resources>
+										<resource>
+											<!-- source -->
+											<directory>apiproxy</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<!-- Proxy Deploy -->
+					<plugin>
+						<groupId>io.apigee.build-tools.enterprise4g</groupId>
+						<artifactId>apigee-edge-maven-plugin</artifactId>
+						<version>1.0.0</version>
+
+						<executions>
+							<execution>
+								<id>configure-bundle-step</id>
+								<phase>package</phase>
+								<goals>
+									<goal>configure</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>deploy-bundle-step</id>
+								<phase>install</phase>
+								<goals>
+									<goal>deploy</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+					<!-- Compile sources of the Proxy -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<version>2.3.2</version>
+
+						<configuration>
+							<source>1.6</source>
+							<target>1.6</target>
+						</configuration>
+					</plugin>
+
+					<!-- Unit Tests on Proxy -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<version>2.9</version>
+
+						<configuration>
+							<testFailureIgnore>false</testFailureIgnore>
+						</configuration>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+
+        <!-- Profile to deploy a proxy with environment configurations -->
+        <profile>
+            <id>proxy-adv</id>
+
+            <build>
+                <plugins>
+
+                    <!-- Google Replacer -->
+                    <!--
+					<plugin>
+                        <groupId>com.google.code.maven-replacer-plugin</groupId>
+                        <artifactId>replacer</artifactId>
+                        <version>1.5.2</version>
+
+						<executions>
+                            <execution>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>replace</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+
+						<configuration>
+                            <basedir>${target.root.dir}</basedir>
+                            <includes>
+                                <include>apiproxy/proxies/default.xml</include>
+                                <include>apiproxy/proxies/loggly.xml</include>
+                                <include>test/integration/test-config.json</include>
+                                <include>test/integration/auth-server.json</include>
+                                <include>apiproxy/${project.artifactId}-v1.xml</include>
+                                <include>resources/edge/org/apiProducts.json</include>
+                                <include>resources/edge/org/developerApps.json</include>
+                            </includes>
+
+							<replacements>
+                                <replacement>
+                                    <token>/${project.artifactId}/v1</token>
+                                    <value>/${project.artifactId}/v1</value>
+                                </replacement>
+                                <replacement>
+                                    <token>demo-test.apigee.net</token>
+                                    <value>${api.northbound.domain}</value>
+                                </replacement>
+                                <replacement>
+                                    <token>sampleAPIProduct</token>
+                                    <value>${project.artifactId}Product-${env}</value>
+                                </replacement>
+                                <replacement>
+                                    <token>sampleAPIApp</token>
+                                    <value>${project.artifactId}-${org}-${env}</value>
+                                </replacement>
+                                <replacement>
+                                    <token>edge_env</token>
+                                    <value>${env}</value>
+                                </replacement>
+                                <replacement>
+                                    <token>edgeVhostName</token>
+                                    <value>${vhostEdgeName}</value>
+                                </replacement>
+                                <replacement>
+                                    <token>@description</token>
+                                    <value>commit ${commit} from ${branch} branch by ${user.name}</value>
+                                </replacement>
+                            </replacements>
+                        </configuration>
+                    </plugin>
+					-->
+
+                    <!-- Proxy Deploy -->
+					<plugin>
+						<groupId>io.apigee.build-tools.enterprise4g</groupId>
+						<artifactId>apigee-edge-maven-plugin</artifactId>
+						<version>1.0.0</version>
+
+						<executions>
+							<execution>
+								<id>configure-bundle-step</id>
+								<phase>package</phase>
+								<goals>
+									<goal>configure</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>deploy-bundle-step</id>
+								<phase>install</phase>
+								<goals>
+									<goal>deploy</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+
+					<!-- Org & Env Config -->
+                    <plugin>
+                        <groupId>com.apigee.edge.config</groupId>
+                        <artifactId>apigee-config-maven-plugin</artifactId>
+
+						<executions>
+                            <execution>
+                                <id>create-config-cache</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>caches</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>create-config-kvm</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>keyvaluemaps</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>create-config-targetserver</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>targetservers</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>create-config-apiproduct</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>apiproducts</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>create-config-developer</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>developers</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>create-config-app</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>apps</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>export-config-app</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>exportAppKeys</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+
+					<!-- Compile sources of the Proxy -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<version>2.3.2</version>
+						<configuration>
+							<source>1.6</source>
+							<target>1.6</target>
+						</configuration>
+					</plugin>
+
+
+					<!-- Unit Tests on Proxy -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<version>2.9</version>
+						<configuration>
+							<testFailureIgnore>false</testFailureIgnore>
+						</configuration>
+					</plugin>
+
+                </plugins>
+            </build>
+        </profile>
+
+
+        <!-- Profile to deploy the parent-pom to nexus -->
+        <!-- Instructions : http://www.baeldung.com/maven-deploy-nexus -->
+        <!-- Command to deploy the pom file : mvn clean deploy -Ppom-deploy -Dmaven.test.skip=true -->
+        <profile>
+            <id>pom-deploy</id>
+
+            <distributionManagement>
+                <snapshotRepository>
+                    <uniqueVersion>false</uniqueVersion>
+                    <id>apigee-snapshot</id>
+                    <name>nexus snapshot</name>
+                    <!--TODO : Make this dynamic -->
+                    <url>http://repo.clover.sidgs.net/content/repositories/apigee-snapshot</url>
+                </snapshotRepository>
+            </distributionManagement>
+
+            <build>
+                <plugins>
+                    <!-- disabling the exisitng mapping to maven repository -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <version>2.4</version>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+
+                    <!-- using nexus specific maven deploy plugin -->
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.5.1</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>default-deploy</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>deploy</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <!-- below value same as server id in maven settings file -->
+                            <serverId>apigee-snapshot</serverId>
+                            <nexusUrl>http://repo.clover.sidgs.net/content</nexusUrl>
+                            <skipStaging>true</skipStaging>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+    </profiles>
+</project>
