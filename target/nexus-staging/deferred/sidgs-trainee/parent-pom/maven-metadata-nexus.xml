@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>sidgs-trainee</groupId>
+  <artifactId>parent-pom</artifactId>
+  <versioning>
+    <versions>
+      <version>1.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20180718220437</lastUpdated>
+  </versioning>
+</metadata>
